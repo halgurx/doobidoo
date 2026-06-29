@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>두비두 룰렛v2.0</title>
+    <script src="./js/confetti.js"></script>
+    <link rel="stylesheet" href="./css/rullet.css">
+</head>
+<body>
+
+<input type="hidden" id="undoStorage" value="[]">
+
+<div class="floating-controls">
+    <button class="floating-btn" id="themeToggleBtn">☀️ 화이트 모드</button>
+    <button class="floating-btn" id="memoOpenBtn">📝 메모장</button>
+    <button class="floating-btn" id="floatingTimerBtn">⏱ 타이머</button>
+</div>
+
+<div class="app-container">
+    <div class="wheel-panel">
+        <div class="roulette-header">
+            <input type="text" class="roulette-title" placeholder="🎯 룰렛의 주제를 적어주세요! (클릭하여 수정)">
+        </div>
+
+        <div class="canvas-container">
+            <div class="pointer" id="wheelPointer"></div>
+            <div class="current-segment-text" id="currentSegmentText"></div>
+            <div class="wheel-overlay"></div>
+            <canvas id="wheelCanvas" width="800" height="800"></canvas>
+            <button class="spin-btn" id="spinBtn">SPIN</button>
+        </div>
+    </div>
+
+    <div class="side-panel middle-panel">
+        <div class="panel-header">
+            <h3>🎮 현재 룰렛 항목</h3>
+            <button id="exportBtn" class="btn-export">📥 TXT 저장</button>
+        </div>
+        <div id="items-list" class="scrollable-list"></div>
+        <div class="add-form">
+            <input type="text" id="newItemName" placeholder="새 항목 이름">
+            <input type="number" id="newItemWeight" value="1" min="1">
+            <button class="btn-add" id="addBtn">추가</button>
+        </div>
+    </div>
+
+    <div class="side-panel right-panel">
+        <div class="status-board">
+            <div class="board-item">
+                <span class="status-label">칸 추가 횟수</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="btn-count" id="btnMinusAdd">-</button>
+                    <span id="addCount">3</span>
+                    <button class="btn-count" id="btnPlusAdd">+</button>
+                </div>
+            </div>
+            <div class="status-divider"></div>
+            <div class="board-item">
+                <span class="status-label">재추첨 횟수</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="btn-count" id="btnMinusRespin">-</button>
+                    <span id="respinCount">3</span>
+                    <button class="btn-count" id="btnPlusRespin">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-header" style="margin-top: 10px;">
+            <h3>🏆 당첨 슬롯</h3>
+            <div style="display: flex; gap: 8px;">
+                <button id="copyResultBtn" class="btn-copy">📋 결과 복사</button>
+                <button id="undoBtn" class="btn-undo" disabled>↩ 취소</button>
+                <button id="addSlotBtn" class="btn-sm">+ 칸 추가</button>
+            </div>
+        </div>
+        
+        <div id="result-slots" class="scrollable-list" style="margin-bottom: 0;"></div>
+
+        <div class="history-wrapper" id="historyWrapper">
+            <h4 id="historyToggle">
+                <div style="display:flex; align-items:center; gap:5px;">📜 재추첨 복구 기록</div>
+                <span id="historyArrow">▼</span>
+            </h4>
+            <div class="history-content" id="historyContent">
+                <ul id="history-list">
+                    <li style="color: #666; font-style: italic;">아직 기록이 없습니다.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="popup-overlay winner-mode" id="winnerOverlay">
+    <div class="popup-content" id="winnerPopup">당첨!</div>
+    <div class="popup-hint">화면을 클릭하면 창이 닫히며 슬롯에 등록됩니다!</div>
+</div>
+
+<div class="popup-overlay" id="timerOverlay">
+    <div class="timer-modal">
+        <h2>⏱ 스톱워치</h2>
+        <div class="timer-inputs" id="timerInputWrap">
+            <input type="number" id="tMin" placeholder="0" min="0" value="1"> <span>분</span>
+            <input type="number" id="tSec" placeholder="0" min="0" max="59" value="0"> <span>초</span>
+        </div>
+        <div class="big-time-display" id="bigTimeDisplay">01:00</div>
+        <div class="timer-controls">
+            <button id="btnStartTimer" class="btn-timer-action btn-start">시작</button>
+            <button id="btnStopTimer" class="btn-timer-action btn-stop" style="display: none;">초기화</button>
+            <button id="btnCloseTimer" class="btn-timer-action btn-close">닫기</button>
+        </div>
+    </div>
+</div>
+
+<div id="memoPanel" class="side-drawer">
+    <div class="drawer-header">
+        <h3>📝 메모장</h3>
+        <button id="closeDrawerBtn">X</button>
+    </div>
+    <textarea id="memoTextarea" placeholder="간단한 메모를 작성해두세요!&#13;&#10;(내용은 창을 닫아도 지워지지 않습니다)"></textarea>
+</div>
+
+<script src="./js/rullet.js"></script>
+</body>
+</html>
