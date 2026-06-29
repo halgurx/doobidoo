@@ -27,11 +27,17 @@
 
 파일 구조
 ├── rullet.html          # 메인 웹 페이지 구조 및 레이아웃
+
 ├── css/
+
 │   └── rullet.css       # 애플리케이션 스타일 및 UI 레이아웃
+
 ├── js/
+
 │   ├── rullet.js        # 메인 로직 및 Canvas 제어 스크립트
+
 │   └── confetti.js      # 시각 효과를 위한 로컬 라이브러리 파일
+
 └── sound/
 
 1.  sound 폴더를 커스텀 사운드 파일(.mp3)으로 채워주세요
