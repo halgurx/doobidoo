@@ -89,5 +89,5 @@ canvas-confetti (v1.6.0) - ISC License
 
 jujud66@gmail.com으로 메일 주시면 가까운 시일내로 답변 드리겠습니다. 
 
-[다운로드] : https://github.com/halgurx/doobidoo/archive/refs/tags/v1.0.0.zip
+[다운로드]: https://github.com/halgurx/doobidoo/archive/refs/tags/v1.0.0.zip
 
