@@ -43,7 +43,7 @@
 └── sound/
 
 
-폴더내에 sound 폴더를 생성하고 내부에 커스텀 사운드 파일(.mp3)을 채워주세요
+##### 폴더내에 sound 폴더를 생성하고 내부에 커스텀 사운드 파일(.mp3)을 채워주세요
     
 효과음 파일이 없어도 동작하지만 효과음을 채워주시면 더 흥이 납니다.
 
@@ -62,7 +62,7 @@ const randomNum = Math.floor(Math.random() * 12) + 1;
 
 
 
-js, css 커스텀
+##### js, css 커스텀
 
 css 색상은 2가지 테마로 되어 있으며 테마 그룹내의 css 칼라를 변경함으로써 별도로 변경이가능합니다. 
     
@@ -72,7 +72,7 @@ js도 자유로이변경이 가능하나 상단의 라이센스 주석만 변경
 
 
 
-📜 서드파티 라이브러리 (Third-Party Libraries)
+###### 📜 서드파티 라이브러리 (Third-Party Libraries)
 
 본 프로젝트는 오픈소스 생태계의 훌륭한 결과물을 포함하여 사용하고 있습니다. 효율적인 단독 실행 환경 구축을 위해 CDN 링크 대신 소스코드를 내부에 직접 포함(Vendoring)하여 배포합니다.
 
@@ -84,7 +84,7 @@ canvas-confetti (v1.6.0) - ISC License
 
 
 
-📄 라이선스 (License)
+###### 📄 라이선스 (License)
 
 이 프로젝트는 GNU General Public License v3.0 (GPLv3)에 따라 라이선스가 부여됩니다.
 
