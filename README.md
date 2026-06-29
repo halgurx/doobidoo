@@ -18,6 +18,7 @@
 
 간단한 웹소스로 구성되어 별도의 설치 과정이 필요하지 않습니다.
 
+[다운로드]
 
 압축을 푸시고 rullet.html를 실행하여 자유로이 사용하시면 됩니다.
 모든 파일과 폴더가 동일한 폴더에 있어야 제대로 동작합니다.
@@ -87,4 +88,6 @@ canvas-confetti (v1.6.0) - ISC License
 문의 사항이 있으시면
 
 jujud66@gmail.com으로 메일 주시면 가까운 시일내로 답변 드리겠습니다. 
+
+[다운로드] : https://github.com/halgurx/doobidoo/archive/refs/tags/v1.0.0.zip
 
