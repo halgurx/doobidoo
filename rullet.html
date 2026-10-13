@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>두비두 룰렛v2.0</title>
+    <title>김길현 네오두비두 룰렛 프로토타입 v1.5</title>
     <script src="./js/confetti.js"></script>
     <link rel="stylesheet" href="./css/rullet.css">
 </head>
@@ -108,6 +108,17 @@
             <button id="btnStartTimer" class="btn-timer-action btn-start">시작</button>
             <button id="btnStopTimer" class="btn-timer-action btn-stop" style="display: none;">초기화</button>
             <button id="btnCloseTimer" class="btn-timer-action btn-close">닫기</button>
+        </div>
+    </div>
+</div>
+
+<!-- ★ 신규 추가: 빈 슬롯 클릭 시 항목 수동 선택 모달 ★ -->
+<div class="popup-overlay" id="selectItemOverlay">
+    <div class="select-modal">
+        <h2>🎯 슬롯에 넣을 항목 선택</h2>
+        <div id="selectItemList" class="scrollable-list select-list"></div>
+        <div class="timer-controls" style="margin-top: 15px;">
+            <button id="btnCloseSelect" class="btn-timer-action btn-close">닫기</button>
         </div>
     </div>
 </div>

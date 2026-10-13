@@ -268,3 +268,36 @@ body.light-theme .status-board span { text-shadow: none; }
 .btn-start { background-color: rgba(45, 232, 86, 0.1); color: var(--neon-green); border: 2px solid var(--neon-green); }
 .btn-stop { background-color: rgba(217, 54, 197, 0.1); color: var(--neon-pink); border: 2px solid var(--neon-pink); }
 .btn-close { background-color: transparent; color: var(--text-sub); border: 2px solid var(--text-sub); }
+/* --- 빈 슬롯 호버 효과 및 수동 선택 모달 스타일 --- */
+.result-slot.empty {
+    cursor: pointer;
+}
+.result-slot.empty:hover {
+    border-color: var(--neon-green);
+    color: var(--text-main);
+    background-color: var(--item-row-hover);
+}
+
+.select-modal {
+    background: var(--panel-bg); padding: 25px; border-radius: 20px; width: 420px; 
+    max-height: 80vh; display: flex; flex-direction: column; text-align: center; 
+    border: 2px solid var(--neon-green); transform: translateY(-20px); 
+    transition: transform 0.3s; color: var(--text-main);
+    box-shadow: calc(var(--shadow-intensity) * 0px) 0 calc(var(--shadow-intensity) * 25px) rgba(45, 232, 86, 0.2);
+    backdrop-filter: blur(10px);
+}
+.popup-overlay.show .select-modal { transform: translateY(0); }
+.select-modal h2 { margin-top: 0; color: var(--neon-pink); font-size: 26px; font-weight: 900; margin-bottom: 15px; }
+.select-list { max-height: 400px; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+
+.select-item-row { 
+    display: flex; align-items: center; justify-content: space-between; 
+    padding: 12px 15px; background: var(--item-row-bg); border-radius: 8px; 
+    cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 18px; 
+    border: 1px solid transparent; 
+}
+.select-item-row:hover { 
+    background: var(--item-row-hover); border-color: var(--neon-green); transform: translateX(5px); 
+}
+.select-item-info { display: flex; align-items: center; gap: 12px; }
+.select-item-badge { width: 22px; height: 22px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 4px rgba(0,0,0,0.4); }

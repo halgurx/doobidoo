@@ -2,8 +2,7 @@
  * 이 프로젝트는 GNU General Public License v3.0을 따릅니다.
  * 자세한 라이선스 내용은 LICENSE 파일을 참조하세요.
  */
-    
-    let remainingAddSlots = 3;
+let remainingAddSlots = 3;
     let remainingRespins = 3;
 
     const colors = ['#ff5c8a', '#2ce0c1', '#f0c735', '#b84dff', '#3b82f6', '#ff704d', '#2de856', '#d936c5', '#4dc3ff', '#f59e0b'];
@@ -25,6 +24,9 @@
     let pendingWinner = null;
     let pendingWinnerIndex = -1;
 
+    // 수동 선택 모달용 타겟 슬롯 인덱스
+    let targetManualSlotIdx = -1;
+
     const canvas = document.getElementById('wheelCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
     const spinBtn = document.getElementById('spinBtn');
@@ -43,6 +45,7 @@
     const historyWrapper = document.getElementById('historyWrapper');
     const historyToggle = document.getElementById('historyToggle');
     const historyArrow = document.getElementById('historyArrow');
+    const historyContent = document.getElementById('historyContent');
 
     const winnerOverlay = document.getElementById('winnerOverlay');
     const winnerPopup = document.getElementById('winnerPopup');
@@ -75,6 +78,11 @@
     const closeDrawerBtn = document.getElementById('closeDrawerBtn');
     const memoPanel = document.getElementById('memoPanel');
 
+    // 항목 수동 선택 모달 DOM
+    const selectItemOverlay = document.getElementById('selectItemOverlay');
+    const selectItemList = document.getElementById('selectItemList');
+    const btnCloseSelect = document.getElementById('btnCloseSelect');
+
     const CENTER_X = canvas.width / 2;
     const CENTER_Y = canvas.height / 2;
     const RADIUS = canvas.width / 2;
@@ -96,6 +104,59 @@
     closeDrawerBtn.addEventListener('click', () => {
         memoPanel.classList.remove('open');
     });
+
+    // --- 3. 수동 항목 선택 모달 닫기 이벤트 ---
+    btnCloseSelect.addEventListener('click', () => {
+        selectItemOverlay.classList.remove('show');
+        targetManualSlotIdx = -1;
+    });
+    selectItemOverlay.addEventListener('click', (e) => {
+        if (e.target === selectItemOverlay) {
+            selectItemOverlay.classList.remove('show');
+            targetManualSlotIdx = -1;
+        }
+    });
+
+    // 수동 항목 선택 모달 열기 함수
+    function openSelectModal(slotIdx) {
+        if (isSpinning || pendingWinner) return;
+        if (segments.length === 0) {
+            alert("현재 룰렛에 선택할 수 있는 항목이 없습니다.");
+            return;
+        }
+        targetManualSlotIdx = slotIdx;
+        selectItemList.innerHTML = '';
+
+        segments.forEach((seg, index) => {
+            const itemRow = document.createElement('div');
+            itemRow.className = 'select-item-row';
+            itemRow.innerHTML = `
+                <div class="select-item-info">
+                    <span class="select-item-badge" style="background: ${seg.color};"></span>
+                    <span>${seg.name}</span>
+                </div>
+                <span style="color: var(--neon-green); font-size: 15px;">${seg.weight}개</span>
+            `;
+            itemRow.addEventListener('click', () => {
+                saveSnapshot(); // 취소(Undo) 기능을 위해 상태 저장
+                resultSlots[targetManualSlotIdx] = {
+                    name: seg.name,
+                    weight: seg.weight,
+                    color: seg.color
+                };
+                segments.splice(index, 1); // 룰렛에서 해당 항목 제거
+                
+                renderSlots();
+                renderInputs();
+                
+                selectItemOverlay.classList.remove('show');
+                targetManualSlotIdx = -1;
+            });
+            selectItemList.appendChild(itemRow);
+        });
+
+        selectItemOverlay.classList.add('show');
+    }
 
     // --- 기존 UI / 이벤트 로직 ---
     historyToggle.addEventListener('click', () => {
@@ -174,24 +235,24 @@
             bigTimeDisplay.textContent = formatTime(totalSeconds); 
             floatingTimerBtn.textContent = `⏱ ${formatTime(totalSeconds)}`;
             
-            // 타이머 작동 시엔 네온 핑크 컬러 유지
             let currentColor = document.body.classList.contains('light-theme') ? '#e74c3c' : '#d936c5';
             floatingTimerBtn.style.color = currentColor; 
             
             if (totalSeconds <= 0) {
                 clearInterval(timerInterval);
                 bigTimeDisplay.textContent = formatTime(0); 
-                floatingTimerBtn.textContent = '⏱ 타이머 설정'; 
+                floatingTimerBtn.textContent = '⏱ 타이머'; 
                 floatingTimerBtn.style.color = '';
                 setTimeout(()=>{alert("설정된 시간이 모두 종료되었습니다!"); resetTimerUI();},300);
             }
         }, 1000);
     });
 
-    btnStopTimer.addEventListener('click', () => { clearInterval(timerInterval); floatingTimerBtn.textContent = '⏱ 타이머 설정'; floatingTimerBtn.style.color = ''; resetTimerUI(); });
+    btnStopTimer.addEventListener('click', () => { clearInterval(timerInterval); floatingTimerBtn.textContent = '⏱ 타이머'; floatingTimerBtn.style.color = ''; resetTimerUI(); });
     function resetTimerUI() { timerInputWrap.style.display = 'flex'; bigTimeDisplay.style.display = 'none'; btnStartTimer.style.display = 'block'; btnStopTimer.style.display = 'none'; }
 
     // --- 오디오 재생 ---
+    let randomNum = 1;
     function playWinSound() {
         try {
             const randomNum = Math.floor(Math.random() * 12) + 1;
@@ -239,7 +300,6 @@
                 ctx.textBaseline = "middle"; 
                 ctx.fillStyle = "#ffffff"; 
                 ctx.font = `${fontSize}px 'Noto Sans KR'`;
-                // 다크/라이트 무관하게 캔버스 텍스트는 그림자가 있어야 잘 보임
                 ctx.shadowColor = "rgba(0,0,0,1)"; 
                 ctx.shadowBlur = segments.length > 50 ? 3 : 10;
                 ctx.shadowOffsetX = 1; 
@@ -276,13 +336,25 @@
     }
 
     function attachInputEvents() {
-        document.querySelectorAll('.input-name').forEach(input => { input.addEventListener('input', (e) => { segments[e.target.getAttribute('data-index')].name = e.target.value; drawWheel(); }); });
+        // 기존 항목 이름 수정 시에도 모든 공백/띄어쓰기 자동 제거
+        document.querySelectorAll('.input-name').forEach(input => { 
+            input.addEventListener('input', (e) => { 
+                const cleanedValue = e.target.value.replace(/\s+/g, '');
+                if (e.target.value !== cleanedValue) {
+                    e.target.value = cleanedValue;
+                }
+                segments[e.target.getAttribute('data-index')].name = cleanedValue; 
+                drawWheel(); 
+            }); 
+        });
         document.querySelectorAll('.input-weight').forEach(input => { input.addEventListener('input', (e) => { let val = Number(e.target.value); if(val < 1) val = 1; segments[e.target.getAttribute('data-index')].weight = val; renderInputs(); }); });
         document.querySelectorAll('.btn-delete').forEach(btn => { btn.addEventListener('click', (e) => { saveSnapshot(); segments.splice(e.target.getAttribute('data-index'), 1); renderInputs(); }); });
     }
 
+    // 새 항목 추가 시 모든 공백/띄어쓰기 제거
     addBtn.addEventListener('click', () => {
-        const newName = newItemNameInput.value.trim(); const newWeight = Number(newItemWeightInput.value) || 1;
+        const newName = newItemNameInput.value.replace(/\s+/g, ''); 
+        const newWeight = Number(newItemWeightInput.value) || 1;
         if (!newName) { alert('항목 이름을 입력해주세요.'); return; }
         saveSnapshot(); 
         const existingItem = segments.find(seg => seg.name === newName);
@@ -308,9 +380,18 @@
             const slot = document.createElement('div');
             let stateClass = activeSlotIndex === idx ? 'active' : (res ? 'filled' : 'empty');
             slot.className = `result-slot ${stateClass}`;
-            if (activeSlotIndex === idx) { slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>추첨 중... 🎲</span></div>`; } 
-            else if (res) { slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>${res.name} <span style="font-size:0.7em; opacity: 0.7;">(${res.weight}개)</span></span></div><button class="btn-reload" data-index="${idx}" title="이 칸만 다시 돌리기">🔄</button>`; } 
-            else { slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>대기 중</span></div>`; }
+            
+            if (activeSlotIndex === idx) { 
+                slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>추첨 중... 🎲</span></div>`; 
+            } 
+            else if (res) { 
+                slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>${res.name} <span style="font-size:0.7em; opacity: 0.7;">(${res.weight}개)</span></span></div><button class="btn-reload" data-index="${idx}" title="이 칸만 다시 돌리기">🔄</button>`; 
+            } 
+            else { 
+                // 빈 슬롯 안내 문구 및 클릭 이벤트 연결
+                slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>대기 중 <span style="font-size:0.75em; opacity:0.6; font-weight:normal;">(클릭하여 직접 선택)</span></span></div>`; 
+                slot.addEventListener('click', () => openSelectModal(idx));
+            }
             resultSlotsContainer.appendChild(slot);
         });
         document.querySelectorAll('.btn-reload').forEach(btn => { btn.addEventListener('click', (e) => { respinSlot(parseInt(e.currentTarget.getAttribute('data-index'))); }); });
@@ -384,7 +465,6 @@
         function animate() {
             currentAngle += spinSpeed; 
             
-            // 4. 감속(마찰력) 계수를 높여 훨씬 천천히 멈추도록 변경 (0.994 ~ 0.997)
             if (isStopping) {
                 if (friction === 0) {
                     friction = Math.random() * 0.003 + 0.994; 
