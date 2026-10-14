@@ -85,7 +85,11 @@ let remainingAddSlots = 3;
     const selectItemList = document.getElementById('selectItemList');
     const btnCloseSelect = document.getElementById('btnCloseSelect');
 
-    // 치지직 연동 DOM
+    // 치지직 연동 DOM (토글 버튼 포함)
+    const chzzkBar = document.getElementById('chzzkBar');
+    const chzzkToggleBtn = document.getElementById('chzzkToggleBtn');
+    const chzzkCloseBarBtn = document.getElementById('chzzkCloseBarBtn');
+    const floatingChzzkDot = document.getElementById('floatingChzzkDot');
     const chzzkUrlInput = document.getElementById('chzzkUrlInput');
     const chzzkConnectBtn = document.getElementById('chzzkConnectBtn');
     const chzzkStatus = document.getElementById('chzzkStatus');
@@ -95,6 +99,17 @@ let remainingAddSlots = 3;
     const CENTER_X = canvas.width / 2;
     const CENTER_Y = canvas.height / 2;
     const RADIUS = canvas.width / 2;
+
+    // --- 0. 치지직 상단 바 토글 스위치 ---
+    chzzkToggleBtn.addEventListener('click', () => {
+        chzzkBar.classList.toggle('open');
+        if (chzzkBar.classList.contains('open')) {
+            setTimeout(() => chzzkUrlInput.focus(), 100);
+        }
+    });
+    chzzkCloseBarBtn.addEventListener('click', () => {
+        chzzkBar.classList.remove('open');
+    });
 
     // --- 1. 테마 토글 스위치 ---
     themeToggleBtn.addEventListener('click', () => {
@@ -260,10 +275,10 @@ let remainingAddSlots = 3;
     function resetTimerUI() { timerInputWrap.style.display = 'flex'; bigTimeDisplay.style.display = 'none'; btnStartTimer.style.display = 'block'; btnStopTimer.style.display = 'none'; }
 
     // --- 오디오 재생 ---
-    let randomNum = 1;
+    
     function playWinSound() {
         try {
-            if(randomNum>12){ randomNum = 1; } else { randomNum++; }
+            const randomNum = Math.floor(Math.random() * 12) + 1;
             const audio = new Audio(`sound/${randomNum}.mp3`);
             audio.play().catch(error => { console.warn(`효과음 재생 실패:`, error); });
             audio.addEventListener('ended', function() { this.src = ''; this.remove(); });
@@ -277,15 +292,14 @@ let remainingAddSlots = 3;
         addSlotBtn.style.borderColor = remainingAddSlots <= 0 ? '#555' : '';
     }
 
-    // --- 룰렛 그리기 ---
+    // --- ★ '돌려돌려 돌림판' 스타일 2단계 분리 렌더링 (글자 무조건 표시 & 겹침 허용) ★ ---
     function drawWheel() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (segments.length === 0) return;
         let totalWeight = segments.reduce((sum, seg) => sum + seg.weight, 0);
-        let startAngle = 0;
-
-        let fontSize = 48;
         
+        // [1단계] 모든 부채꼴 배경 조각과 테두리 선 그리기
+        let startAngle = 0;
         segments.forEach((seg) => {
             let sliceAngle = (seg.weight / totalWeight) * 2 * Math.PI;
             ctx.globalAlpha = (highlightedSegmentId && seg.id !== highlightedSegmentId) ? 0.2 : 1.0;
@@ -300,24 +314,45 @@ let remainingAddSlots = 3;
             ctx.strokeStyle = '#000'; 
             ctx.stroke();
             
-            if (sliceAngle > 0.03 || segments.length <= 120) {
-                ctx.save(); 
-                ctx.translate(CENTER_X, CENTER_Y); 
-                ctx.rotate(startAngle + sliceAngle / 2); 
-                ctx.textAlign = "right"; 
-                ctx.textBaseline = "middle"; 
-                ctx.fillStyle = "#ffffff"; 
-                ctx.font = `${fontSize}px 'Noto Sans KR'`;
-                ctx.shadowColor = "rgba(0,0,0,1)"; 
-                ctx.shadowBlur = segments.length > 50 ? 3 : 10;
-                ctx.shadowOffsetX = 1; 
-                ctx.shadowOffsetY = 1; 
-                ctx.fillText(seg.name, RADIUS * 0.85, 0); 
-                ctx.restore();
-            }
+            startAngle += sliceAngle;
+        });
+
+        // [2단계] 텍스트를 안쪽(중심부 근처)에서 바깥쪽 방향으로 뻗어 나가게 그리기
+        startAngle = 0;
+        let fontSize = 40; 
+        // 중심(SPIN 버튼 반경 55px) 바로 바깥쪽인 반지름의 22% 지점부터 글자 시작
+        const innerStartOffset = RADIUS * 0.22; 
+        
+        segments.forEach((seg) => {
+            let sliceAngle = (seg.weight / totalWeight) * 2 * Math.PI;
+            ctx.globalAlpha = (highlightedSegmentId && seg.id !== highlightedSegmentId) ? 0.15 : 1.0;
+
+            ctx.save(); 
+            ctx.translate(CENTER_X, CENTER_Y); 
+            ctx.rotate(startAngle + sliceAngle / 2); 
+            
+            // ★ 핵심: 좌측 정렬(left)로 설정하여 글자가 길어질수록 오른쪽(원판 바깥쪽)으로 뻗어 나가게 함
+            ctx.textAlign = "left"; 
+            ctx.textBaseline = "middle"; 
+            ctx.font = `900 ${fontSize}px 'Noto Sans KR'`;
+            
+            
+            const displayText = `${seg.name}`; 
+
+            // 두꺼운 검은색 외곽선 먼저 그리기
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = "#000000";
+            ctx.lineJoin = "round";
+            ctx.strokeText(displayText, innerStartOffset, 0);
+
+            // 흰색 글씨 덮어쓰기
+            ctx.fillStyle = "#ffffff"; 
+            ctx.fillText(displayText, innerStartOffset, 0); 
+            ctx.restore();
             
             startAngle += sliceAngle;
         });
+
         ctx.globalAlpha = 1.0;
         canvas.style.transform = `rotate(${currentAngle}rad)`;
     }
@@ -344,7 +379,7 @@ let remainingAddSlots = 3;
             `;
             itemsListContainer.appendChild(row);
         });
-        lastFlashedId = null; // 1회 반짝임 후 초기화
+        lastFlashedId = null;
         attachInputEvents(); drawWheel();
     }
 
@@ -363,7 +398,6 @@ let remainingAddSlots = 3;
         document.querySelectorAll('.btn-delete').forEach(btn => { btn.addEventListener('click', (e) => { saveSnapshot(); segments.splice(e.target.getAttribute('data-index'), 1); renderInputs(); }); });
     }
 
-    // 공통 항목 추가 함수 (수동 입력 및 도네이션 연동 공용)
     function addOrUpdateSegment(rawName, weightToAdd, isFromDonation = false) {
         const cleanName = rawName.replace(/\s+/g, '');
         if (!cleanName || weightToAdd < 1) return null;
@@ -596,13 +630,12 @@ let remainingAddSlots = 3;
     });
 
     // =========================================================================
-    // ★ 신규 추가: 치지직(Chzzk) 실시간 도네이션 웹소켓 연동 로직 ★
+    // ★ 치지직(Chzzk) 실시간 도네이션 웹소켓 연동 로직 ★
     // =========================================================================
     let chzzkSocket = null;
     let pingInterval = null;
     let isChzzkConnected = false;
 
-    // 토스트 알림 출력 함수
     function showToast(title, message) {
         const toast = document.createElement('div');
         toast.className = 'toast-msg';
@@ -616,16 +649,14 @@ let remainingAddSlots = 3;
         }, 3500);
     }
 
-    // URL 또는 텍스트에서 32자리 치지직 채널 ID 추출
     function extractChannelId(input) {
         const cleaned = input.trim();
         const match = cleaned.match(/([a-f0-9]{32})/i);
         return match ? match[1] : null;
     }
 
-    // 로컬 PowerShell 중계기를 1순위로 호출하여 콘솔 에러를 원천 차단한 버전
+    // 로컬 PowerShell 중계기 1순위 호출
     async function fetchChzzkApi(targetUrl) {
-        // 1순위: 로컬 PowerShell 미니 중계기 호출 (콘솔 403/CORS 에러 발생 안 함)
         try {
             const proxyUrl = `http://localhost:8089/?url=${encodeURIComponent(targetUrl)}`;
             const proxyRes = await fetch(proxyUrl, { cache: 'no-store' });
@@ -633,11 +664,8 @@ let remainingAddSlots = 3;
                 const data = await proxyRes.json();
                 if (data && data.content) return data;
             }
-        } catch (e) {
-            // 중계기가 꺼져 있을 때만 2순위로 넘어감
-        }
+        } catch (e) {}
 
-        // 2순위: 직접 호출 시도 (OBS 보안 해제 옵션 등을 썼을 때의 예비용)
         try {
             const directRes = await fetch(targetUrl, { cache: 'no-store' });
             if (directRes.ok) {
@@ -649,31 +677,39 @@ let remainingAddSlots = 3;
         throw new Error("치지직 API 연결 실패! (중계기_실행.bat 창이 켜져 있는지 확인해주세요)");
     }
 
-    // 상태 표시 업데이트
+    // 상단 바 상태 및 우측 상단 토글 버튼 LED 동시 업데이트
     function updateChzzkStatus(state, text) {
         chzzkStatus.className = `chzzk-status ${state}`;
         chzzkStatus.innerHTML = `<span class="status-dot"></span>${text}`;
+        floatingChzzkDot.className = `status-dot ${state}`;
     }
 
-   // 도네이션 데이터 처리 핵심 함수 (1,000원 = 1개, 1,000원 미만 버림)
+    // --- ★ 2. 특수문자 내부 텍스트만 추출하는 도네이션 함수 (handleDonation 함수 교체) ★ ---
     function handleDonation(donorName, payAmount, rawMsg) {
-        // ★ 추가된 안전장치: 룰렛이 돌아가는 중이거나 당첨 창이 떠 있을 때는 도네이션 반영 차단
         if (isSpinning || pendingWinner) {
             console.log("[도네이션 무시] 현재 룰렛 추첨이 진행 중입니다.");
             return;
         }
 
         const count = Math.floor(Number(payAmount) / 1000);
-        if (count < 1) {
-            console.log(`[도네이션 무시] 1,000원 미만 후원 (${payAmount}원)`);
-            return;
-        }
+        if (count < 1) return;
 
-        const cleanMsg = (rawMsg || '').replace(/\s+/g, '');
-        if (!cleanMsg) {
-            console.log(`[도네이션 무시] 텍스트가 없는 후원 (${payAmount}원)`);
-            return;
+        let targetText = rawMsg || '';
+
+        // [2번-경우A] 메시지 안에 [항목], {항목}, <항목>, 【항목】 같은 특수문자 괄호가 있다면 그 안의 글자만 쏙 추출!
+        // 예: "오늘도 화이팅하세요 [황금올리브] 추천합니다" -> "황금올리브" 만 추출됨
+        const bracketMatch = targetText.match(/\[(.*?)\]|\{(.*?)\}|\<(.*?)\>|【(.*?)】/);
+        if (bracketMatch) {
+            // 매칭된 그룹 중 실제 텍스트가 들어있는 값 선택
+            targetText = bracketMatch[1] || bracketMatch[2] || bracketMatch[3] || bracketMatch[4];
+        } else {
+            // 만약 "특수문자 안의 텍스트가 없으면 아예 도네이션을 룰렛에 넣지 않는다(무시)"를 원하시면 
+            // 아래 주석(//)을 해제하시면 됩니다!
+            return; 
         }
+        
+        const cleanMsg = targetText.replace(/\s+/g, '');
+        if (!cleanMsg) return;
 
         const addedName = addOrUpdateSegment(cleanMsg, count, true);
         if (addedName) {
@@ -681,7 +717,6 @@ let remainingAddSlots = 3;
         }
     }
 
-    // 치지직 웹소켓 연결 시작
     async function connectChzzk() {
         const channelId = extractChannelId(chzzkUrlInput.value);
         if (!channelId) {
@@ -693,7 +728,6 @@ let remainingAddSlots = 3;
             updateChzzkStatus('connecting', '채팅방 정보 조회 중...');
             chzzkConnectBtn.disabled = true;
 
-            // 1. live-detail 또는 live-status에서 chatChannelId 가져오기
             const statusUrl = `https://api.chzzk.naver.com/polling/v2/channels/${channelId}/live-status`;
             const statusData = await fetchChzzkApi(statusUrl);
             const chatChannelId = statusData?.content?.chatChannelId;
@@ -702,7 +736,6 @@ let remainingAddSlots = 3;
                 throw new Error("현재 진행 중인 생방송(채팅방)을 찾을 수 없습니다.");
             }
 
-            // 2. 채팅방 접속용 Access Token 발급
             const tokenUrl = `https://comm-api.game.naver.com/nng_main/v1/chats/access-token?channelId=${chatChannelId}&chatType=STREAMING`;
             const tokenData = await fetchChzzkApi(tokenUrl);
             const accessToken = tokenData?.content?.accessToken;
@@ -711,12 +744,10 @@ let remainingAddSlots = 3;
                 throw new Error("채팅 서버 접속 토큰을 가져오지 못했습니다.");
             }
 
-            // 3. 치지직 웹소켓 서버 연결 (ss1 ~ ss5 중 랜덤 연결)
             const serverIdx = Math.floor(Math.random() * 5) + 1;
             chzzkSocket = new WebSocket(`wss://kr-ss${serverIdx}.chat.naver.com/chat`);
 
             chzzkSocket.onopen = () => {
-                // 최초 접속 인증 패킷(cmd: 100) 전송
                 const connectPacket = {
                     ver: "2",
                     cmd: 100,
@@ -737,10 +768,14 @@ let remainingAddSlots = 3;
                 chzzkConnectBtn.textContent = "중지";
                 chzzkConnectBtn.classList.replace('connect', 'stop');
                 chzzkUrlInput.disabled = true;
-                updateChzzkStatus('connected', '실시간 도네이션 연동 중');
+                updateChzzkStatus('connected', '실시간 연동 중');
                 showToast("⚡ 치지직 연결 성공", "실시간 문자 도네이션 감지를 시작합니다.");
 
-                // 연결 유지를 위한 주기적 Ping(cmd: 0) 전송
+                // ★ 접속 성공 시 0.8초 뒤 상단 바를 자동으로 스르륵 닫아 화면을 깔끔하게 만듦
+                setTimeout(() => {
+                    chzzkBar.classList.remove('open');
+                }, 800);
+
                 pingInterval = setInterval(() => {
                     if (chzzkSocket && chzzkSocket.readyState === WebSocket.OPEN) {
                         chzzkSocket.send(JSON.stringify({ ver: "2", cmd: 0 }));
@@ -752,34 +787,27 @@ let remainingAddSlots = 3;
                 try {
                     const data = JSON.parse(event.data);
 
-                    // 서버로부터 Ping(cmd: 0)이 오면 Pong(cmd: 10000)으로 응답
                     if (data.cmd === 0) {
                         chzzkSocket.send(JSON.stringify({ ver: "2", cmd: 10000 }));
                         return;
                     }
 
-                    // 도네이션 패킷 감지 (cmd: 93102)
                     if (data.cmd === 93102 && Array.isArray(data.bdy)) {
                         data.bdy.forEach(item => {
                             const extrasStr = item.extras || item.extra;
                             if (!extrasStr) return;
 
                             const extras = typeof extrasStr === 'string' ? JSON.parse(extrasStr) : extrasStr;
-                            
-                            // 문자 후원(CHAT)이거나 금액(payAmount)이 있는 후원 처리
-                            // 만약 영상 도네이션을 제외하고 오직 문자 도네이션만 받으시려면 아래 조건문에 && extras.donationType === 'CHAT' 을 추가하시면 됩니다.
-                            
                             const payAmount = extras.payAmount || 0;
                             const msg = item.msg || '';
                             
                             let nickname = '익명 후원자';
-                            if (item.profile && extras.donationType === 'CHAT'){
+                            if (item.profile && extras.donationType === 'CHAT') {
                                 const profileObj = typeof item.profile === 'string' ? JSON.parse(item.profile) : item.profile;
                                 if (profileObj && profileObj.nickname) nickname = profileObj.nickname;
-                            } 
-                            /*else if (extras.isAnonymous && extras.donationType === 'CHAT') {
+                            } else if (extras.isAnonymous) {
                                 nickname = '익명의 후원자';
-                            }*/
+                            }
 
                             handleDonation(nickname, payAmount, msg);
                         });
@@ -808,7 +836,6 @@ let remainingAddSlots = 3;
         }
     }
 
-    // 치지직 연결 중지 함수
     function disconnectChzzk(statusText = "대기 중") {
         isChzzkConnected = false;
         if (pingInterval) {
@@ -826,7 +853,6 @@ let remainingAddSlots = 3;
         updateChzzkStatus(statusText.includes("실패") || statusText.includes("오류") ? 'error' : '', statusText);
     }
 
-    // 접속 / 중지 토글 버튼 이벤트
     chzzkConnectBtn.addEventListener('click', () => {
         if (isChzzkConnected) {
             disconnectChzzk("연동 중지됨");
@@ -840,12 +866,17 @@ let remainingAddSlots = 3;
         if (e.key === 'Enter' && !isChzzkConnected) connectChzzk();
     });
 
-    // ⚡ 가상 도네이션 테스트 버튼 이벤트
     chzzkTestBtn.addEventListener('click', () => {
-        const sampleItems = [' 마라탕 ', '황금올리브치킨', '삼겹살', '초밥세트', '떡볶이', '피자'];
+        const sampleItems = [
+            '오늘도 방송 화이팅! [마라탕]', 
+            '이건 꼭 드셔야 합니다 {황금올리브치킨}', 
+            '<삼겹살> 가즈아ㅏㅏ', 
+            '【초밥세트】 추천합니다', 
+            '[떡볶이] 맛있겠다', 
+            '단무지 대신 [피자]'
+        ];
         const randomItem = sampleItems[Math.floor(Math.random() * sampleItems.length)];
-        // 1,000원 ~ 5,500원 사이 랜덤 금액 테스트 (잔돈 버림 확인용)
-        const randomAmount = (Math.floor(Math.random() * 5) + 1) * 1000 + (Math.random() > 0.5 ? 500 : 0);
+        const randomAmount = (Math.floor(Math.random() * 15) + 1) * 1000 + (Math.random() > 0.5 ? 500 : 0);
         
         handleDonation('테스트시청자', randomAmount, randomItem);
     });

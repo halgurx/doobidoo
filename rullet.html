@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>김길현 네오두비두 룰렛 프로토타입 v1.6 (치지직 연동)</title>
+    <title>김길현 네오두비두 룰렛 프로토타입 v1.7</title>
     <script src="./js/confetti.js"></script>
     <link rel="stylesheet" href="./css/rullet.css">
 </head>
@@ -11,16 +11,21 @@
 
 <input type="hidden" id="undoStorage" value="[]">
 
-<!-- ★ 신규 추가: 최상단 치지직 도네이션 연동 바 ★ -->
-<div class="chzzk-bar">
-    <div class="chzzk-logo">⚡ CHZZK 연동</div>
-    <input type="text" id="chzzkUrlInput" class="chzzk-input" placeholder="치지직 방송 주소 또는 채널 ID 입력 (예: https://chzzk.naver.com/live/...)">
+<!-- ★ 토글형 최상단 치지직 연동 바 (평소에는 위로 숨겨져 있음) ★ -->
+<div class="chzzk-bar" id="chzzkBar">
+    <div class="chzzk-logo">⚡ CHZZK 도네이션 연동</div>
+    <input type="text" id="chzzkUrlInput" class="chzzk-input" placeholder="치지직 방송 주소 또는 채널 ID 입력 (접속 시 이 창은 자동으로 닫힙니다)">
     <button id="chzzkConnectBtn" class="btn-chzzk connect">접속</button>
     <div id="chzzkStatus" class="chzzk-status"><span class="status-dot"></span>대기 중</div>
     <button id="chzzkTestBtn" class="btn-chzzk test" title="가상 도네이션 발생 테스트">⚡ 도네 테스트</button>
+    <button id="chzzkCloseBarBtn" class="btn-chzzk close-bar" title="창 접기">▲ 접기</button>
 </div>
 
+<!-- 우측 상단 플로팅 컨트롤 버튼 그룹 -->
 <div class="floating-controls">
+    <button class="floating-btn chzzk-toggle-btn" id="chzzkToggleBtn">
+        <span class="status-dot" id="floatingChzzkDot"></span>⚡ 치지직 연동
+    </button>
     <button class="floating-btn" id="themeToggleBtn">☀️ 화이트 모드</button>
     <button class="floating-btn" id="memoOpenBtn">📝 메모장</button>
     <button class="floating-btn" id="floatingTimerBtn">⏱ 타이머</button>
@@ -121,7 +126,6 @@
     </div>
 </div>
 
-<!-- 빈 슬롯 클릭 시 항목 수동 선택 모달 -->
 <div class="popup-overlay" id="selectItemOverlay">
     <div class="select-modal">
         <h2>🎯 슬롯에 넣을 항목 선택</h2>
@@ -140,7 +144,6 @@
     <textarea id="memoTextarea" placeholder="간단한 메모를 작성해두세요!&#13;&#10;(내용은 창을 닫아도 지워지지 않습니다)"></textarea>
 </div>
 
-<!-- ★ 신규 추가: 실시간 도네이션 토스트 알림 영역 ★ -->
 <div id="toastContainer" class="toast-container"></div>
 
 <script src="./js/rullet.js"></script>
