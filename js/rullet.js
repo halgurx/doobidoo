@@ -698,7 +698,7 @@ let remainingAddSlots = 3;
 
         // [2번-경우A] 메시지 안에 [항목], {항목}, <항목>, 【항목】 같은 특수문자 괄호가 있다면 그 안의 글자만 쏙 추출!
         // 예: "오늘도 화이팅하세요 [황금올리브] 추천합니다" -> "황금올리브" 만 추출됨
-        const bracketMatch = targetText.match(/\[(.*?)\]|\{(.*?)\}|\<(.*?)\>|【(.*?)】/);
+        /*const bracketMatch = targetText.match(/\[(.*?)\]|\{(.*?)\}|\<(.*?)\>|【(.*?)】/);
         if (bracketMatch) {
             // 매칭된 그룹 중 실제 텍스트가 들어있는 값 선택
             targetText = bracketMatch[1] || bracketMatch[2] || bracketMatch[3] || bracketMatch[4];
@@ -706,7 +706,7 @@ let remainingAddSlots = 3;
             // 만약 "특수문자 안의 텍스트가 없으면 아예 도네이션을 룰렛에 넣지 않는다(무시)"를 원하시면 
             // 아래 주석(//)을 해제하시면 됩니다!
             return; 
-        }
+        }*/
         
         const cleanMsg = targetText.replace(/\s+/g, '');
         if (!cleanMsg) return;
