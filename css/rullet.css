@@ -51,19 +51,19 @@ body.light-theme {
     --btn-base: rgba(255,255,255,0.8);
 }
 
-/* 배경 */
+/* 배경 (상단 바 추가로 인해 세로 배치 및 스크롤 허용) */
 body {
-    margin: 0; padding: 0; display: flex; justify-content: center; align-items: center;
-    height: 100vh; font-family: 'Noto Sans KR', sans-serif; overflow: hidden;
+    margin: 0; padding: 0; display: flex; flex-direction: column; justify-content: flex-start; align-items: center;
+    min-height: 100vh; font-family: 'Noto Sans KR', sans-serif; overflow-x: hidden; overflow-y: auto;
     background-color: var(--bg-color);
     background-image: linear-gradient(var(--bg-pattern) 1px, transparent 1px), linear-gradient(90deg, var(--bg-pattern) 1px, transparent 1px);
     background-size: 30px 30px;
     transition: background-color 0.4s ease;
 }
 
-/* 우측 상단 플로팅 컨트롤 그룹 */
+/* 우측 상단 플로팅 컨트롤 그룹 (상단 바 아래로 위치 조정) */
 .floating-controls {
-    position: absolute; top: 20px; right: 20px; z-index: 50; display: flex; gap: 10px;
+    position: absolute; top: 75px; right: 20px; z-index: 50; display: flex; gap: 10px;
 }
 .floating-btn {
     background: var(--btn-base); color: var(--neon-pink); border: 2px solid var(--neon-pink);
@@ -74,8 +74,8 @@ body {
 .floating-btn:hover { background: var(--neon-pink); color: #fff; transform: translateY(-2px); }
 
 .app-container {
-    display: flex; width: 100%; max-width: 1920px; height: 100vh; max-height: 1080px;
-    box-sizing: border-box; padding: 20px; gap: 30px; margin-top: 40px;
+    display: flex; width: 100%; max-width: 1920px; height: calc(100vh - 60px); min-height: 900px; max-height: 1080px;
+    box-sizing: border-box; padding: 20px; gap: 30px; margin-top: 10px;
 }
 
 /* 룰렛 타이틀 */
@@ -301,3 +301,76 @@ body.light-theme .status-board span { text-shadow: none; }
 }
 .select-item-info { display: flex; align-items: center; gap: 12px; }
 .select-item-badge { width: 22px; height: 22px; border-radius: 50%; display: inline-block; box-shadow: inset 0 0 4px rgba(0,0,0,0.4); }
+
+/* --- 치지직(Chzzk) 상단 연동 바 스타일 --- */
+.chzzk-bar {
+    width: 100%; max-width: 1920px; background: var(--panel-bg);
+    border-bottom: 2px solid #00ffa3; padding: 10px 30px;
+    display: flex; align-items: center; gap: 15px; box-sizing: border-box;
+    z-index: 60; backdrop-filter: blur(10px);
+    box-shadow: 0 4px 15px rgba(0, 255, 163, 0.15);
+}
+.chzzk-logo {
+    color: #00ffa3; font-weight: 900; font-size: 18px; display: flex; align-items: center; gap: 5px;
+    text-shadow: calc(var(--shadow-intensity) * 0px) 0 calc(var(--shadow-intensity) * 8px) rgba(0, 255, 163, 0.5);
+    white-space: nowrap;
+}
+.chzzk-input {
+    flex: 1; max-width: 550px; background: var(--input-bg); color: var(--text-main);
+    border: 1px solid var(--input-border); border-radius: 6px; padding: 8px 15px;
+    font-family: 'Noto Sans KR'; font-size: 15px; font-weight: bold; outline: none; transition: 0.2s;
+}
+.chzzk-input:focus { border-color: #00ffa3; box-shadow: 0 0 8px rgba(0, 255, 163, 0.3); }
+
+.btn-chzzk {
+    padding: 8px 20px; border-radius: 6px; font-family: 'Noto Sans KR'; font-size: 15px;
+    font-weight: 900; cursor: pointer; transition: 0.2s; border: none; white-space: nowrap;
+}
+.btn-chzzk.connect { background: #00ffa3; color: #000; }
+.btn-chzzk.connect:hover { filter: brightness(1.15); box-shadow: 0 0 12px rgba(0, 255, 163, 0.6); }
+.btn-chzzk.stop { background: #ff0055; color: #fff; }
+.btn-chzzk.stop:hover { filter: brightness(1.15); box-shadow: 0 0 12px rgba(255, 0, 85, 0.6); }
+.btn-chzzk.test { background: transparent; color: var(--neon-yellow); border: 1px dashed var(--neon-yellow); margin-left: auto; font-size: 13px; padding: 6px 12px; }
+.btn-chzzk.test:hover { background: var(--neon-yellow); color: #000; }
+
+.chzzk-status {
+    display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: var(--text-sub); white-space: nowrap;
+}
+.status-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #777; display: inline-block; transition: 0.3s;
+}
+.chzzk-status.connecting .status-dot { background: #f39c12; box-shadow: 0 0 8px #f39c12; }
+.chzzk-status.connected .status-dot { background: #00ffa3; box-shadow: 0 0 8px #00ffa3; }
+.chzzk-status.error .status-dot { background: #ff0055; box-shadow: 0 0 8px #ff0055; }
+
+/* 도네이션으로 항목 추가 시 반짝이는 애니메이션 */
+@keyframes itemFlash {
+    0% { background-color: rgba(0, 255, 163, 0.6); transform: scale(1.02); }
+    100% { background-color: var(--item-row-bg); transform: scale(1); }
+}
+.item-row.flash { animation: itemFlash 1s ease-out; }
+
+/* 실시간 도네이션 토스트 알림 (좌측 상단부터 아래로 쌓임) */
+.toast-container {
+    position: fixed; 
+    top: 75px; /* 상단 치지직 바 바로 아래 */
+    left: 25px; /* 화면 좌측 모서리 */
+    z-index: 10000;
+    display: flex; 
+    flex-direction: column; /* 위에서 아래로 차곡차곡 쌓임 */
+    gap: 10px; 
+    pointer-events: none;
+}
+.toast-msg {
+    background: var(--panel-bg); color: var(--text-main); border-left: 5px solid #00ffa3;
+    padding: 15px 20px; border-radius: 8px; font-weight: bold; font-size: 16px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+    transform: translateX(-120%); /* 왼쪽 화면 밖에서 대기 */
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--input-border);
+    border-right: 1px solid var(--input-border); border-bottom: 1px solid var(--input-border);
+}
+.toast-msg.show { 
+    transform: translateX(0); /* 왼쪽에서 오른쪽으로 스르륵 등장 */
+}
+.toast-title { font-size: 13px; color: #00ffa3; }

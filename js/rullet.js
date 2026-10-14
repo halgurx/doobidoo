@@ -26,6 +26,8 @@ let remainingAddSlots = 3;
 
     // 수동 선택 모달용 타겟 슬롯 인덱스
     let targetManualSlotIdx = -1;
+    // 최근 도네이션으로 추가/수정된 항목 하이라이트용 ID
+    let lastFlashedId = null;
 
     const canvas = document.getElementById('wheelCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -83,6 +85,13 @@ let remainingAddSlots = 3;
     const selectItemList = document.getElementById('selectItemList');
     const btnCloseSelect = document.getElementById('btnCloseSelect');
 
+    // 치지직 연동 DOM
+    const chzzkUrlInput = document.getElementById('chzzkUrlInput');
+    const chzzkConnectBtn = document.getElementById('chzzkConnectBtn');
+    const chzzkStatus = document.getElementById('chzzkStatus');
+    const chzzkTestBtn = document.getElementById('chzzkTestBtn');
+    const toastContainer = document.getElementById('toastContainer');
+
     const CENTER_X = canvas.width / 2;
     const CENTER_Y = canvas.height / 2;
     const RADIUS = canvas.width / 2;
@@ -105,7 +114,7 @@ let remainingAddSlots = 3;
         memoPanel.classList.remove('open');
     });
 
-    // --- 3. 수동 항목 선택 모달 닫기 이벤트 ---
+    // --- 3. 수동 항목 선택 모달 이벤트 ---
     btnCloseSelect.addEventListener('click', () => {
         selectItemOverlay.classList.remove('show');
         targetManualSlotIdx = -1;
@@ -117,7 +126,6 @@ let remainingAddSlots = 3;
         }
     });
 
-    // 수동 항목 선택 모달 열기 함수
     function openSelectModal(slotIdx) {
         if (isSpinning || pendingWinner) return;
         if (segments.length === 0) {
@@ -138,13 +146,13 @@ let remainingAddSlots = 3;
                 <span style="color: var(--neon-green); font-size: 15px;">${seg.weight}개</span>
             `;
             itemRow.addEventListener('click', () => {
-                saveSnapshot(); // 취소(Undo) 기능을 위해 상태 저장
+                saveSnapshot();
                 resultSlots[targetManualSlotIdx] = {
                     name: seg.name,
                     weight: seg.weight,
                     color: seg.color
                 };
-                segments.splice(index, 1); // 룰렛에서 해당 항목 제거
+                segments.splice(index, 1);
                 
                 renderSlots();
                 renderInputs();
@@ -255,7 +263,7 @@ let remainingAddSlots = 3;
     let randomNum = 1;
     function playWinSound() {
         try {
-            const randomNum = Math.floor(Math.random() * 12) + 1;
+            if(randomNum>12){ randomNum = 1; } else { randomNum++; }
             const audio = new Audio(`sound/${randomNum}.mp3`);
             audio.play().catch(error => { console.warn(`효과음 재생 실패:`, error); });
             audio.addEventListener('ended', function() { this.src = ''; this.remove(); });
@@ -319,7 +327,11 @@ let remainingAddSlots = 3;
         let totalWeight = segments.reduce((sum, seg) => sum + seg.weight, 0);
         segments.forEach((seg, index) => {
             let percent = totalWeight > 0 ? ((seg.weight / totalWeight) * 100).toFixed(1) : 0;
-            const row = document.createElement('div'); row.className = 'item-row';
+            const row = document.createElement('div'); 
+            row.className = 'item-row';
+            if (seg.id === lastFlashedId) {
+                row.classList.add('flash');
+            }
             
             row.innerHTML = `
                 <div class="badge-container">
@@ -332,11 +344,11 @@ let remainingAddSlots = 3;
             `;
             itemsListContainer.appendChild(row);
         });
+        lastFlashedId = null; // 1회 반짝임 후 초기화
         attachInputEvents(); drawWheel();
     }
 
     function attachInputEvents() {
-        // 기존 항목 이름 수정 시에도 모든 공백/띄어쓰기 자동 제거
         document.querySelectorAll('.input-name').forEach(input => { 
             input.addEventListener('input', (e) => { 
                 const cleanedValue = e.target.value.replace(/\s+/g, '');
@@ -351,16 +363,45 @@ let remainingAddSlots = 3;
         document.querySelectorAll('.btn-delete').forEach(btn => { btn.addEventListener('click', (e) => { saveSnapshot(); segments.splice(e.target.getAttribute('data-index'), 1); renderInputs(); }); });
     }
 
-    // 새 항목 추가 시 모든 공백/띄어쓰기 제거
-    addBtn.addEventListener('click', () => {
-        const newName = newItemNameInput.value.replace(/\s+/g, ''); 
-        const newWeight = Number(newItemWeightInput.value) || 1;
-        if (!newName) { alert('항목 이름을 입력해주세요.'); return; }
-        saveSnapshot(); 
-        const existingItem = segments.find(seg => seg.name === newName);
-        if (existingItem) { existingItem.weight += newWeight; } else { segments.push({ id: nextId++, name: newName, weight: newWeight, color: colors[nextId % colors.length] }); }
-        newItemNameInput.value = ''; newItemWeightInput.value = '1'; renderInputs();
+    // 공통 항목 추가 함수 (수동 입력 및 도네이션 연동 공용)
+    function addOrUpdateSegment(rawName, weightToAdd, isFromDonation = false) {
+        const cleanName = rawName.replace(/\s+/g, '');
+        if (!cleanName || weightToAdd < 1) return null;
+
+        saveSnapshot();
+        const existingItem = segments.find(seg => seg.name === cleanName);
+        let targetId;
+
+        if (existingItem) {
+            existingItem.weight += weightToAdd;
+            targetId = existingItem.id;
+        } else {
+            targetId = nextId++;
+            segments.push({ 
+                id: targetId, 
+                name: cleanName, 
+                weight: weightToAdd, 
+                color: colors[targetId % colors.length] 
+            });
+        }
+
+        if (isFromDonation) {
+            lastFlashedId = targetId;
+        }
+
+        renderInputs();
         setTimeout(() => { itemsListContainer.scrollTop = itemsListContainer.scrollHeight; }, 10);
+        return cleanName;
+    }
+
+    addBtn.addEventListener('click', () => {
+        const newName = newItemNameInput.value;
+        const newWeight = Number(newItemWeightInput.value) || 1;
+        if (!newName.replace(/\s+/g, '')) { alert('항목 이름을 입력해주세요.'); return; }
+        
+        addOrUpdateSegment(newName, newWeight, false);
+        newItemNameInput.value = ''; 
+        newItemWeightInput.value = '1'; 
     });
     newItemNameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') addBtn.click(); });
 
@@ -388,7 +429,6 @@ let remainingAddSlots = 3;
                 slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>${res.name} <span style="font-size:0.7em; opacity: 0.7;">(${res.weight}개)</span></span></div><button class="btn-reload" data-index="${idx}" title="이 칸만 다시 돌리기">🔄</button>`; 
             } 
             else { 
-                // 빈 슬롯 안내 문구 및 클릭 이벤트 연결
                 slot.innerHTML = `<div class="slot-info"><span class="slot-num">#${idx + 1}</span><span>대기 중 <span style="font-size:0.75em; opacity:0.6; font-weight:normal;">(클릭하여 직접 선택)</span></span></div>`; 
                 slot.addEventListener('click', () => openSelectModal(idx));
             }
@@ -553,6 +593,261 @@ let remainingAddSlots = 3;
                 renderSlots(); renderInputs(); undoBtn.disabled = false; 
             }
         }
+    });
+
+    // =========================================================================
+    // ★ 신규 추가: 치지직(Chzzk) 실시간 도네이션 웹소켓 연동 로직 ★
+    // =========================================================================
+    let chzzkSocket = null;
+    let pingInterval = null;
+    let isChzzkConnected = false;
+
+    // 토스트 알림 출력 함수
+    function showToast(title, message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-msg';
+        toast.innerHTML = `<span class="toast-title">${title}</span><span>${message}</span>`;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3500);
+    }
+
+    // URL 또는 텍스트에서 32자리 치지직 채널 ID 추출
+    function extractChannelId(input) {
+        const cleaned = input.trim();
+        const match = cleaned.match(/([a-f0-9]{32})/i);
+        return match ? match[1] : null;
+    }
+
+    // 로컬 PowerShell 중계기를 1순위로 호출하여 콘솔 에러를 원천 차단한 버전
+    async function fetchChzzkApi(targetUrl) {
+        // 1순위: 로컬 PowerShell 미니 중계기 호출 (콘솔 403/CORS 에러 발생 안 함)
+        try {
+            const proxyUrl = `http://localhost:8089/?url=${encodeURIComponent(targetUrl)}`;
+            const proxyRes = await fetch(proxyUrl, { cache: 'no-store' });
+            if (proxyRes.ok) {
+                const data = await proxyRes.json();
+                if (data && data.content) return data;
+            }
+        } catch (e) {
+            // 중계기가 꺼져 있을 때만 2순위로 넘어감
+        }
+
+        // 2순위: 직접 호출 시도 (OBS 보안 해제 옵션 등을 썼을 때의 예비용)
+        try {
+            const directRes = await fetch(targetUrl, { cache: 'no-store' });
+            if (directRes.ok) {
+                const data = await directRes.json();
+                if (data && data.content) return data;
+            }
+        } catch (e) {}
+
+        throw new Error("치지직 API 연결 실패! (중계기_실행.bat 창이 켜져 있는지 확인해주세요)");
+    }
+
+    // 상태 표시 업데이트
+    function updateChzzkStatus(state, text) {
+        chzzkStatus.className = `chzzk-status ${state}`;
+        chzzkStatus.innerHTML = `<span class="status-dot"></span>${text}`;
+    }
+
+   // 도네이션 데이터 처리 핵심 함수 (1,000원 = 1개, 1,000원 미만 버림)
+    function handleDonation(donorName, payAmount, rawMsg) {
+        // ★ 추가된 안전장치: 룰렛이 돌아가는 중이거나 당첨 창이 떠 있을 때는 도네이션 반영 차단
+        if (isSpinning || pendingWinner) {
+            console.log("[도네이션 무시] 현재 룰렛 추첨이 진행 중입니다.");
+            return;
+        }
+
+        const count = Math.floor(Number(payAmount) / 1000);
+        if (count < 1) {
+            console.log(`[도네이션 무시] 1,000원 미만 후원 (${payAmount}원)`);
+            return;
+        }
+
+        const cleanMsg = (rawMsg || '').replace(/\s+/g, '');
+        if (!cleanMsg) {
+            console.log(`[도네이션 무시] 텍스트가 없는 후원 (${payAmount}원)`);
+            return;
+        }
+
+        const addedName = addOrUpdateSegment(cleanMsg, count, true);
+        if (addedName) {
+            showToast(`🧀 ${donorName}님 ${Number(payAmount).toLocaleString()}치즈 후원!`, `'${addedName}' 항목 +${count}개 추가됨!`);
+        }
+    }
+
+    // 치지직 웹소켓 연결 시작
+    async function connectChzzk() {
+        const channelId = extractChannelId(chzzkUrlInput.value);
+        if (!channelId) {
+            alert("올바른 치지직 방송 주소나 32자리 채널 ID를 입력해주세요.\n예: https://chzzk.naver.com/live/...");
+            return;
+        }
+
+        try {
+            updateChzzkStatus('connecting', '채팅방 정보 조회 중...');
+            chzzkConnectBtn.disabled = true;
+
+            // 1. live-detail 또는 live-status에서 chatChannelId 가져오기
+            const statusUrl = `https://api.chzzk.naver.com/polling/v2/channels/${channelId}/live-status`;
+            const statusData = await fetchChzzkApi(statusUrl);
+            const chatChannelId = statusData?.content?.chatChannelId;
+
+            if (!chatChannelId) {
+                throw new Error("현재 진행 중인 생방송(채팅방)을 찾을 수 없습니다.");
+            }
+
+            // 2. 채팅방 접속용 Access Token 발급
+            const tokenUrl = `https://comm-api.game.naver.com/nng_main/v1/chats/access-token?channelId=${chatChannelId}&chatType=STREAMING`;
+            const tokenData = await fetchChzzkApi(tokenUrl);
+            const accessToken = tokenData?.content?.accessToken;
+
+            if (!accessToken) {
+                throw new Error("채팅 서버 접속 토큰을 가져오지 못했습니다.");
+            }
+
+            // 3. 치지직 웹소켓 서버 연결 (ss1 ~ ss5 중 랜덤 연결)
+            const serverIdx = Math.floor(Math.random() * 5) + 1;
+            chzzkSocket = new WebSocket(`wss://kr-ss${serverIdx}.chat.naver.com/chat`);
+
+            chzzkSocket.onopen = () => {
+                // 최초 접속 인증 패킷(cmd: 100) 전송
+                const connectPacket = {
+                    ver: "2",
+                    cmd: 100,
+                    svcid: "game",
+                    cid: chatChannelId,
+                    bdy: {
+                        uid: null,
+                        devType: 2001,
+                        accTkn: accessToken,
+                        auth: "READ"
+                    },
+                    tid: 1
+                };
+                chzzkSocket.send(JSON.stringify(connectPacket));
+
+                isChzzkConnected = true;
+                chzzkConnectBtn.disabled = false;
+                chzzkConnectBtn.textContent = "중지";
+                chzzkConnectBtn.classList.replace('connect', 'stop');
+                chzzkUrlInput.disabled = true;
+                updateChzzkStatus('connected', '실시간 도네이션 연동 중');
+                showToast("⚡ 치지직 연결 성공", "실시간 문자 도네이션 감지를 시작합니다.");
+
+                // 연결 유지를 위한 주기적 Ping(cmd: 0) 전송
+                pingInterval = setInterval(() => {
+                    if (chzzkSocket && chzzkSocket.readyState === WebSocket.OPEN) {
+                        chzzkSocket.send(JSON.stringify({ ver: "2", cmd: 0 }));
+                    }
+                }, 20000);
+            };
+
+            chzzkSocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    // 서버로부터 Ping(cmd: 0)이 오면 Pong(cmd: 10000)으로 응답
+                    if (data.cmd === 0) {
+                        chzzkSocket.send(JSON.stringify({ ver: "2", cmd: 10000 }));
+                        return;
+                    }
+
+                    // 도네이션 패킷 감지 (cmd: 93102)
+                    if (data.cmd === 93102 && Array.isArray(data.bdy)) {
+                        data.bdy.forEach(item => {
+                            const extrasStr = item.extras || item.extra;
+                            if (!extrasStr) return;
+
+                            const extras = typeof extrasStr === 'string' ? JSON.parse(extrasStr) : extrasStr;
+                            
+                            // 문자 후원(CHAT)이거나 금액(payAmount)이 있는 후원 처리
+                            // 만약 영상 도네이션을 제외하고 오직 문자 도네이션만 받으시려면 아래 조건문에 && extras.donationType === 'CHAT' 을 추가하시면 됩니다.
+                            
+                            const payAmount = extras.payAmount || 0;
+                            const msg = item.msg || '';
+                            
+                            let nickname = '익명 후원자';
+                            if (item.profile && extras.donationType === 'CHAT'){
+                                const profileObj = typeof item.profile === 'string' ? JSON.parse(item.profile) : item.profile;
+                                if (profileObj && profileObj.nickname) nickname = profileObj.nickname;
+                            } 
+                            /*else if (extras.isAnonymous && extras.donationType === 'CHAT') {
+                                nickname = '익명의 후원자';
+                            }*/
+
+                            handleDonation(nickname, payAmount, msg);
+                        });
+                    }
+                } catch (err) {
+                    console.error("패킷 파싱 에러:", err);
+                }
+            };
+
+            chzzkSocket.onerror = (err) => {
+                console.error("웹소켓 에러:", err);
+                disconnectChzzk("연결 오류 발생");
+            };
+
+            chzzkSocket.onclose = () => {
+                if (isChzzkConnected) {
+                    disconnectChzzk("연결이 종료되었습니다");
+                }
+            };
+
+        } catch (error) {
+            console.error(error);
+            alert(error.message);
+            chzzkConnectBtn.disabled = false;
+            disconnectChzzk("연결 실패");
+        }
+    }
+
+    // 치지직 연결 중지 함수
+    function disconnectChzzk(statusText = "대기 중") {
+        isChzzkConnected = false;
+        if (pingInterval) {
+            clearInterval(pingInterval);
+            pingInterval = null;
+        }
+        if (chzzkSocket) {
+            chzzkSocket.close();
+            chzzkSocket = null;
+        }
+        chzzkConnectBtn.disabled = false;
+        chzzkConnectBtn.textContent = "접속";
+        chzzkConnectBtn.classList.replace('stop', 'connect');
+        chzzkUrlInput.disabled = false;
+        updateChzzkStatus(statusText.includes("실패") || statusText.includes("오류") ? 'error' : '', statusText);
+    }
+
+    // 접속 / 중지 토글 버튼 이벤트
+    chzzkConnectBtn.addEventListener('click', () => {
+        if (isChzzkConnected) {
+            disconnectChzzk("연동 중지됨");
+            showToast("🛑 연동 중지", "치지직 도네이션 연동을 중지했습니다.");
+        } else {
+            connectChzzk();
+        }
+    });
+
+    chzzkUrlInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !isChzzkConnected) connectChzzk();
+    });
+
+    // ⚡ 가상 도네이션 테스트 버튼 이벤트
+    chzzkTestBtn.addEventListener('click', () => {
+        const sampleItems = [' 마라탕 ', '황금올리브치킨', '삼겹살', '초밥세트', '떡볶이', '피자'];
+        const randomItem = sampleItems[Math.floor(Math.random() * sampleItems.length)];
+        // 1,000원 ~ 5,500원 사이 랜덤 금액 테스트 (잔돈 버림 확인용)
+        const randomAmount = (Math.floor(Math.random() * 5) + 1) * 1000 + (Math.random() > 0.5 ? 500 : 0);
+        
+        handleDonation('테스트시청자', randomAmount, randomItem);
     });
 
     // 초기 실행
